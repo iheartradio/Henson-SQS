@@ -127,6 +127,14 @@ class SQS(Extension):
         'SQS_WAIT_TIME': 20,
     }
 
+    REQUIRED_SETTINGS = (
+        'AWS_ACCESS_KEY',
+        'AWS_ACCESS_SECRET',
+        'AWS_REGION_NAME',
+        'SQS_INBOUND_QUEUE_URL',
+        'SQS_OUTBOUND_QUEUE_URL',
+    )
+
     @lazy
     def client(self):
         """Return the connection to SQS.
