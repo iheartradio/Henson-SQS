@@ -1,5 +1,6 @@
 """SQS plugin for Henson."""
 
+from pkg_resources import get_distribution
 import json
 
 from boto3.session import Session
@@ -8,10 +9,10 @@ from lazy import lazy
 
 
 __all__ = ('SQS',)
+__version__ = get_distribution(__package__).version
 
 
 class Consumer:
-
     """A consumer of an SQS queue.
 
     For each message consumed from the queue, the specified callback
@@ -73,7 +74,6 @@ class Consumer:
 
 
 class Producer:
-
     """A producer to write to an SQS queue.
 
     Args:
@@ -109,7 +109,6 @@ class Producer:
 
 
 class SQS(Extension):
-
     """An interface to interact with an SQS queue.
 
     Args:
