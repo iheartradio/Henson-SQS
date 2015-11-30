@@ -65,12 +65,12 @@ class Consumer:
             )
             for message in messages.get('Messages', []):
                 message['Body'] = json.loads(message['Body'])
-                yield message
                 if self.delete_messages_on_read:
                     self.client.delete_message(
                         QueueUrl=self.queue_url,
                         ReceiptHandle=message['ReceiptHandle'],
                     )
+                yield message
 
 
 class Producer:
