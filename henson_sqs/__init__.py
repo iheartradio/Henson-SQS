@@ -1,5 +1,7 @@
 """SQS plugin for Henson."""
 
+import asyncio
+from contextlib import suppress
 from pkg_resources import get_distribution
 import json
 
@@ -48,29 +50,36 @@ class Consumer:
         self.wait_time = wait_time
         self.delete_messages_on_read = delete_messages_on_read
 
-    def __iter__(self):
-        """Return an iterator containing messages from the broker.
+    @asyncio.coroutine
+    def read(self):
+        """Read a single message from the message queue.
 
-        Yields:
-            dict: The next message in the queue.
+        Returns:
+            dict: A JSON-decoded message.
         """
-        while True:
+        message = None
+        while message is None:
             messages = self.client.receive_message(
                 QueueUrl=self.queue_url,
                 AttributeNames=self.attribute_names,
                 MessageAttributeNames=self.message_attributes,
-                MaxNumberOfMessages=self.message_batch_size,
+                # MaxNumberOfMessages=self.message_batch_size,
+                MaxNumberOfMessages=1,
                 VisibilityTimeout=self.visibility_timeout,
                 WaitTimeSeconds=self.wait_time,
             )
-            for message in messages.get('Messages', []):
+
+            with suppress(IndexError, KeyError):
+                message = messages['Messages'][0]
                 message['Body'] = json.loads(message['Body'])
+                # TODO: once Henson support message acknowledgement,
+                # this should be happen there instead.
                 if self.delete_messages_on_read:
                     self.client.delete_message(
                         QueueUrl=self.queue_url,
                         ReceiptHandle=message['ReceiptHandle'],
                     )
-                yield message
+        return message
 
 
 class Producer:
@@ -88,6 +97,7 @@ class Producer:
         self.client = client
         self.queue_url = queue_url
 
+    @asyncio.coroutine
     def send(self, message, delay=0, message_attributes=None):
         """Send the message to the queue.
 
@@ -163,6 +173,7 @@ class SQS(Extension):
             message_batch_size=settings['SQS_MESSAGE_BATCH_SIZE'],
             visibility_timeout=settings['SQS_VISIBILITY_TIMEOUT'],
             wait_time=settings['SQS_WAIT_TIME'],
+            delete_messages_on_read=settings['SQS_DELETE_MESSAGES_ON_READ'],
         )
 
     def producer(self):
