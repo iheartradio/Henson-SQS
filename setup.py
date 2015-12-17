@@ -6,7 +6,7 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=[
         'boto3>=1.1.1',
-        'Henson>=0.3.0',
+        'Henson>=0.5.0',
         'lazy>=1.2',
     ],
     tests_require=[
