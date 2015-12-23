@@ -21,36 +21,24 @@ class Consumer:
     will be called.
 
     Args:
+        app (henson.base.Application): The app instance registered to
+            the SQS extension.
         client (boto3.SQS.Client): The SQS client that should be used
             for connections.
-        queue_url (str): The SQS queue URL to read from.
-        attribute_names (List[str]): Metadata attributes to return with
-            each SQS message.
-        message_attribtue_names (List[str]): Attributes of each message
-            to be returned.
-        message_batch_size (int): The maximum number of messages to be
-            retrieved with each call.
-        visibility_timeout (int): The number of seconds to hide the
-            returned messages from subsequent retrieve queries.
-        wait_time (int): The maximum amount of time to wait for new
-            messages.
-        delete_messages_on_read (Optional[bool]): Whether or not to
-            delete messages after they're read from the specified queue.
-            Defaults to ``True``.
+
+    .. versionchanged:: 0.2.0
+
+        All parameters passed to ``__init__`` other than ``client`` were
+        replaced with a reference to an
+        :class:`~henson.base.Application`. These parameters previously
+        took values from ``app.settings``; ``app.settings`` is now used
+        directly.
     """
 
-    def __init__(self, client, queue_url, attribute_names, message_attributes,
-                 message_batch_size, visibility_timeout, wait_time,
-                 delete_messages_on_read=True):
+    def __init__(self, app, client):
         """Initialize the consumer."""
+        self.app = app
         self.client = client
-        self.queue_url = queue_url
-        self.attribute_names = attribute_names
-        self.message_attributes = message_attributes
-        self.message_batch_size = message_batch_size
-        self.visibility_timeout = visibility_timeout
-        self.wait_time = wait_time
-        self.delete_messages_on_read = delete_messages_on_read
 
     @asyncio.coroutine
     def read(self):
@@ -62,13 +50,13 @@ class Consumer:
         message = None
         while message is None:
             messages = self.client.receive_message(
-                QueueUrl=self.queue_url,
-                AttributeNames=self.attribute_names,
-                MessageAttributeNames=self.message_attributes,
-                # MaxNumberOfMessages=self.message_batch_size,
+                QueueUrl=self.app.settings['SQS_INBOUND_QUEUE_URL'],
+                AttributeNames=self.app.settings['SQS_ATTRIBUTE_NAMES'],
+                MessageAttributeNames=self.app.settings['SQS_MESSAGE_ATTRIBUTES'],
+                # TODO: It would be nice if this was configurable.
                 MaxNumberOfMessages=1,
-                VisibilityTimeout=self.visibility_timeout,
-                WaitTimeSeconds=self.wait_time,
+                VisibilityTimeout=self.app.settings['SQS_VISIBILITY_TIMEOUT'],
+                WaitTimeSeconds=self.app.settings['SQS_WAIT_TIME'],
             )
 
             with suppress(IndexError, KeyError):
@@ -76,9 +64,9 @@ class Consumer:
                 message['Body'] = json.loads(message['Body'])
                 # TODO: once Henson support message acknowledgement,
                 # this should be happen there instead.
-                if self.delete_messages_on_read:
+                if self.app.settings['SQS_DELETE_MESSAGES_ON_READ']:
                     self.client.delete_message(
-                        QueueUrl=self.queue_url,
+                        QueueUrl=self.app.settings['SQS_INBOUND_QUEUE_URL'],
                         ReceiptHandle=message['ReceiptHandle'],
                     )
         return message
@@ -88,16 +76,24 @@ class Producer:
     """A producer to write to an SQS queue.
 
     Args:
+        app (henson.base.Application): The app instance registered to
+            the SQS extension.
         client (boto3.SQS.Client): The client with which to write
             messages.
-        queue_url (str): The URL representing the SQS queue to which the
-            message should be written.
+
+    .. versionchanged:: 0.2.0
+
+        All parameters passed to ``__init__`` other than ``client`` were
+        replaced with a reference to an
+        :class:`~henson.base.Application`. These parameters previously
+        took values from ``app.settings``; ``app.settings`` is now used
+        directly.
     """
 
-    def __init__(self, client, queue_url):
+    def __init__(self, app, client):
         """Initialize the producer."""
+        self.app = app
         self.client = client
-        self.queue_url = queue_url
 
     @asyncio.coroutine
     def send(self, message, delay=0, message_attributes=None):
@@ -113,7 +109,7 @@ class Producer:
         if message_attributes is None:
             message_attributes = {}
         return self.client.send_message(
-            QueueUrl=self.queue_url,
+            QueueUrl=self.app.settings['SQS_OUTBOUND_QUEUE_URL'],
             MessageBody=json.dumps(message),
             DelaySeconds=delay,
             MessageAttributes=message_attributes,
@@ -166,17 +162,7 @@ class SQS(Extension):
         Returns:
             Consumer: The new consumer.
         """
-        settings = self.app.settings
-        return Consumer(
-            client=self.client,
-            queue_url=settings['SQS_INBOUND_QUEUE_URL'],
-            attribute_names=settings['SQS_ATTRIBUTE_NAMES'],
-            message_attributes=settings['SQS_MESSAGE_ATTRIBUTES'],
-            message_batch_size=settings['SQS_MESSAGE_BATCH_SIZE'],
-            visibility_timeout=settings['SQS_VISIBILITY_TIMEOUT'],
-            wait_time=settings['SQS_WAIT_TIME'],
-            delete_messages_on_read=settings['SQS_DELETE_MESSAGES_ON_READ'],
-        )
+        return Consumer(app=self.app, client=self.client)
 
     def producer(self):
         """Return a new SQS producer.
@@ -184,7 +170,4 @@ class SQS(Extension):
         Returns:
             Producer: The new producer.
         """
-        return Producer(
-            client=self.client,
-            queue_url=self.app.settings['SQS_OUTBOUND_QUEUE_URL']
-        )
+        return Producer(app=self.app, client=self.client)
