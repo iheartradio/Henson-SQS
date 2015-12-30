@@ -9,6 +9,9 @@ Release TBD
 
 - Update Henson-SQS to use asyncio coroutines for sending and receiving
   messages as required by Henson>=0.5.0 (*Backwards Incompatible*)
+- Register a message acknowledgement callback to delete the incoming message
+  from the queue after processing has finished
+- Remove the ``SQS_DELETE_MESSAGES_ON_READ`` setting
 
 
 Version 0.1.1

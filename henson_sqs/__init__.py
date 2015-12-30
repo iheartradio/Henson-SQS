@@ -39,6 +39,22 @@ class Consumer:
         """Initialize the consumer."""
         self.app = app
         self.client = client
+        self.app.message_acknowledgement(self.acknowledge_message)
+
+    @asyncio.coroutine
+    def acknowledge_message(self, app, message):
+        """Delete a message from the SQS inbound queue.
+
+        Args:
+            app (henson.base.Application): The application that
+                processed the message.
+            message (dict): The message returned from the consumer to
+                the application.
+        """
+        self.client.delete_message(
+            QueueUrl=self.app.settings['SQS_INBOUND_QUEUE_URL'],
+            ReceiptHandle=message['ReceiptHandle'],
+        )
 
     @asyncio.coroutine
     def read(self):
@@ -62,13 +78,6 @@ class Consumer:
             with suppress(IndexError, KeyError):
                 message = messages['Messages'][0]
                 message['Body'] = json.loads(message['Body'])
-                # TODO: once Henson support message acknowledgement,
-                # this should be happen there instead.
-                if self.app.settings['SQS_DELETE_MESSAGES_ON_READ']:
-                    self.client.delete_message(
-                        QueueUrl=self.app.settings['SQS_INBOUND_QUEUE_URL'],
-                        ReceiptHandle=message['ReceiptHandle'],
-                    )
         return message
 
 
@@ -127,7 +136,6 @@ class SQS(Extension):
 
     DEFAULT_SETTINGS = {
         'SQS_ATTRIBUTE_NAMES': ['All'],
-        'SQS_DELETE_MESSAGES_ON_READ': True,
         'SQS_MESSAGE_ATTRIBUTES': ['All'],
         'SQS_MESSAGE_BATCH_SIZE': 10,
         'SQS_VISIBILITY_TIMEOUT': 60,
