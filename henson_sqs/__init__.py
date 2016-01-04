@@ -39,10 +39,10 @@ class Consumer:
         """Initialize the consumer."""
         self.app = app
         self.client = client
-        self.app.message_acknowledgement(self.acknowledge_message)
+        self.app.message_acknowledgement(self._acknowledge_message)
 
     @asyncio.coroutine
-    def acknowledge_message(self, app, message):
+    def _acknowledge_message(self, app, message):
         """Delete a message from the SQS inbound queue.
 
         Args:
