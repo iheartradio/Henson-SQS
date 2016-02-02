@@ -1,7 +1,6 @@
 """SQS plugin for Henson."""
 
 import asyncio
-from contextlib import suppress
 from pkg_resources import get_distribution
 import json
 
@@ -75,9 +74,12 @@ class Consumer:
                 WaitTimeSeconds=self.app.settings['SQS_WAIT_TIME'],
             )
 
-            with suppress(IndexError, KeyError):
+            try:
                 message = messages['Messages'][0]
                 message['Body'] = json.loads(message['Body'])
+            except (IndexError, KeyError):
+                yield from asyncio.sleep(1)
+
         return message
 
 
