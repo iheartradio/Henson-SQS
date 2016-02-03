@@ -36,6 +36,9 @@ class Consumer:
 
     def __init__(self, app, client):
         """Initialize the consumer."""
+        if not app.settings['SQS_INBOUND_QUEUE_URL']:
+            raise ValueError(
+                'SQS_INBOUND_QUEUE_URL must be defined to create a consumer.')
         self.app = app
         self.client = client
         self.app.message_acknowledgement(self._acknowledge_message)
@@ -103,6 +106,9 @@ class Producer:
 
     def __init__(self, app, client):
         """Initialize the producer."""
+        if not app.settings['SQS_OUTBOUND_QUEUE_URL']:
+            raise ValueError(
+                'SQS_OUTBOUND_QUEUE_URL must be defined to create a producer.')
         self.app = app
         self.client = client
 
@@ -138,8 +144,10 @@ class SQS(Extension):
 
     DEFAULT_SETTINGS = {
         'SQS_ATTRIBUTE_NAMES': ['All'],
+        'SQS_INBOUND_QUEUE_URL': None,
         'SQS_MESSAGE_ATTRIBUTES': ['All'],
         'SQS_MESSAGE_BATCH_SIZE': 10,
+        'SQS_OUTBOUND_QUEUE_URL': None,
         'SQS_VISIBILITY_TIMEOUT': 60,
         'SQS_WAIT_TIME': 20,
     }
@@ -148,8 +156,6 @@ class SQS(Extension):
         'AWS_ACCESS_KEY',
         'AWS_ACCESS_SECRET',
         'AWS_REGION_NAME',
-        'SQS_INBOUND_QUEUE_URL',
-        'SQS_OUTBOUND_QUEUE_URL',
     )
 
     @lazy
