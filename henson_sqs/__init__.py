@@ -150,13 +150,10 @@ class SQS(Extension):
         'SQS_OUTBOUND_QUEUE_URL': None,
         'SQS_VISIBILITY_TIMEOUT': 60,
         'SQS_WAIT_TIME': 20,
+        'AWS_ACCESS_KEY': None,
+        'AWS_ACCESS_SECRET': None,
+        'AWS_REGION_NAME': None,
     }
-
-    REQUIRED_SETTINGS = (
-        'AWS_ACCESS_KEY',
-        'AWS_ACCESS_SECRET',
-        'AWS_REGION_NAME',
-    )
 
     @lazy
     def client(self):
