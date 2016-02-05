@@ -12,6 +12,7 @@ Release TBD
 - Register a message acknowledgement callback to delete the incoming message
   from the queue after processing has finished
 - Remove the ``SQS_DELETE_MESSAGES_ON_READ`` setting
+- Make queue URL and AWS credentials settings optional
 
 
 Version 0.1.1
