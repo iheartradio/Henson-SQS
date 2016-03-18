@@ -2,8 +2,9 @@
 
 import asyncio
 from functools import partial
-from pkg_resources import get_distribution
 import json
+import os
+import pkg_resources
 
 from boto3.session import Session
 from henson import Extension
@@ -11,7 +12,17 @@ from lazy import lazy
 
 
 __all__ = ('SQS',)
-__version__ = get_distribution(__package__).version
+
+try:
+    _dist = pkg_resources.get_distribution(__package__)
+    if not __file__.startswith(os.path.join(_dist.location, __package__)):
+        # Manually raise the exception if there is a distribution but
+        # it's installed from elsewhere.
+        raise pkg_resources.DistributionNotFound
+except pkg_resources.DistributionNotFound:
+    __version__ = 'development'
+else:
+    __version__ = _dist.version
 
 
 class Consumer:
