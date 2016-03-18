@@ -1,6 +1,7 @@
 """SQS plugin for Henson."""
 
 import asyncio
+from functools import partial
 from pkg_resources import get_distribution
 import json
 
@@ -41,6 +42,9 @@ class Consumer:
                 'SQS_INBOUND_QUEUE_URL must be defined to create a consumer.')
         self.app = app
         self.client = client
+        self._consuming = False
+        self._message_queue = asyncio.Queue(
+            maxsize=self.app.settings['SQS_PREFETCH_LIMIT'])
         self.app.message_acknowledgement(self._acknowledge_message)
 
     @asyncio.coroutine
@@ -59,31 +63,46 @@ class Consumer:
         )
 
     @asyncio.coroutine
+    def _begin_consuming(self):
+        """Begin consuming from the SQS queue."""
+        self._consuming = True
+        loop = asyncio.get_event_loop()
+        loop.create_task(self._consume())
+
+    @asyncio.coroutine
+    def _consume(self):
+        """Fetch messages from the configured SQS queue."""
+        # HACK: run_in_executor is used as a workaround to use boto
+        # inside a coroutine. This is a stopgap solution that should be
+        # replaced once boto has support for asyncio or aiobotocore has
+        # a stable release.
+        loop = asyncio.get_event_loop()
+        receive_message = partial(
+            self.client.receive_message,
+            QueueUrl=self.app.settings['SQS_INBOUND_QUEUE_URL'],
+            AttributeNames=self.app.settings['SQS_ATTRIBUTE_NAMES'],
+            MessageAttributeNames=self.app.settings['SQS_MESSAGE_ATTRIBUTES'],
+            MaxNumberOfMessages=self.app.settings['SQS_MESSAGE_BATCH_SIZE'],
+            VisibilityTimeout=self.app.settings['SQS_VISIBILITY_TIMEOUT'],
+            WaitTimeSeconds=self.app.settings['SQS_WAIT_TIME'],
+        )
+        while True:
+            future = loop.run_in_executor(None, receive_message)
+            messages = yield from future
+            for message in messages.get('Messages', []):
+                message['Body'] = json.loads(message['Body'])
+                yield from self._message_queue.put(message)
+
+    @asyncio.coroutine
     def read(self):
         """Read a single message from the message queue.
 
         Returns:
             dict: A JSON-decoded message.
         """
-        message = None
-        while message is None:
-            messages = self.client.receive_message(
-                QueueUrl=self.app.settings['SQS_INBOUND_QUEUE_URL'],
-                AttributeNames=self.app.settings['SQS_ATTRIBUTE_NAMES'],
-                MessageAttributeNames=self.app.settings['SQS_MESSAGE_ATTRIBUTES'],
-                # TODO: It would be nice if this was configurable.
-                MaxNumberOfMessages=1,
-                VisibilityTimeout=self.app.settings['SQS_VISIBILITY_TIMEOUT'],
-                WaitTimeSeconds=self.app.settings['SQS_WAIT_TIME'],
-            )
-
-            try:
-                message = messages['Messages'][0]
-                message['Body'] = json.loads(message['Body'])
-            except (IndexError, KeyError):
-                yield from asyncio.sleep(1)
-
-        return message
+        if not self._consuming:
+            yield from self._begin_consuming()
+        return (yield from self._message_queue.get())
 
 
 class Producer:
@@ -148,6 +167,7 @@ class SQS(Extension):
         'SQS_MESSAGE_ATTRIBUTES': ['All'],
         'SQS_MESSAGE_BATCH_SIZE': 10,
         'SQS_OUTBOUND_QUEUE_URL': None,
+        'SQS_PREFETCH_LIMIT': 0,
         'SQS_VISIBILITY_TIMEOUT': 60,
         'SQS_WAIT_TIME': 20,
         'AWS_ACCESS_KEY': None,

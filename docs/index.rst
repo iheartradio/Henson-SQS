@@ -42,6 +42,11 @@ The following settings are used by Henson-SQS:
 ``SQS_OUTBOUND_QUEUE_URL``         The URL representing the SQS queue to be
                                    used for outbound messages.
                                    required
+``SQS_PREFETCH_LIMIT``             The maximum number of messages to keep in
+                                   the internal queue waiting to be processed.
+                                   If set to ``0``, the queue size is
+                                   unlimited.
+                                   default: ``0``
 ``SQS_ATTRIBUTE_NAMES``            A list of names of metadata attributes to be
                                    fetched with inbound queue messages.
                                    default: ``['All']``
