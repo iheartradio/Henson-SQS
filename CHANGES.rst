@@ -9,6 +9,8 @@ Release TBD
   from the queue after processing has finished
 - Remove the ``SQS_DELETE_MESSAGES_ON_READ`` setting
 - Make queue URL and AWS credentials settings optional
+- Bugfix: postpone internal message queue creation until it's needed by the
+  `_consume` function
 
 
 Version 0.1.1

@@ -54,8 +54,6 @@ class Consumer:
         self.app = app
         self.client = client
         self._consuming = False
-        self._message_queue = asyncio.Queue(
-            maxsize=self.app.settings['SQS_PREFETCH_LIMIT'])
         self.app.message_acknowledgement(self._acknowledge_message)
 
     @asyncio.coroutine
@@ -78,6 +76,10 @@ class Consumer:
         """Begin consuming from the SQS queue."""
         self._consuming = True
         loop = asyncio.get_event_loop()
+        self._message_queue = asyncio.Queue(
+            maxsize=self.app.settings['SQS_PREFETCH_LIMIT'],
+            loop=loop,
+        )
         loop.create_task(self._consume())
 
     @asyncio.coroutine
