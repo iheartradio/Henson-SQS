@@ -112,6 +112,7 @@ class Consumer:
 
         Returns:
             dict: A JSON-decoded message.
+
         """
         if not self._consuming:
             yield from self._begin_consuming()
@@ -194,6 +195,7 @@ class SQS(Extension):
 
         Returns:
             boto3.SQS.Client: A connection to the SQS service.
+
         """
         session = Session(
             aws_access_key_id=self.app.settings['AWS_ACCESS_KEY'],
@@ -207,6 +209,7 @@ class SQS(Extension):
 
         Returns:
             Consumer: The new consumer.
+
         """
         return Consumer(app=self.app, client=self.client)
 
@@ -215,5 +218,6 @@ class SQS(Extension):
 
         Returns:
             Producer: The new producer.
+
         """
         return Producer(app=self.app, client=self.client)
