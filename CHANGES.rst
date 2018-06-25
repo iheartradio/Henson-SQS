@@ -1,6 +1,8 @@
 Version 0.2.0
 =============
 
+Released 2018-06-25
+
 - Update Henson-SQS to use asyncio coroutines for sending and receiving
   messages as required by Henson>=0.5.0 (*Backwards Incompatible*)
 - Register a message acknowledgement callback to delete the incoming message
