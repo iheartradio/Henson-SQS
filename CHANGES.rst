@@ -1,7 +1,7 @@
 Version 0.2.0
 =============
 
-Release TBD
+Released 2018-06-25
 
 - Update Henson-SQS to use asyncio coroutines for sending and receiving
   messages as required by Henson>=0.5.0 (*Backwards Incompatible*)
@@ -11,6 +11,7 @@ Release TBD
 - Make queue URL and AWS credentials settings optional
 - Bugfix: postpone internal message queue creation until it's needed by the
   `_consume` function
+- Bugfix: _begin_consuming needs to return the future, otherwise the excpetions are not bubbled up to Henson
 
 
 Version 0.1.1
