@@ -1,8 +1,6 @@
 Version 0.2.0
 =============
 
-Release TBD
-
 - Update Henson-SQS to use asyncio coroutines for sending and receiving
   messages as required by Henson>=0.5.0 (*Backwards Incompatible*)
 - Register a message acknowledgement callback to delete the incoming message
@@ -11,6 +9,7 @@ Release TBD
 - Make queue URL and AWS credentials settings optional
 - Bugfix: postpone internal message queue creation until it's needed by the
   `_consume` function
+- Bugfix: _begin_consuming needs to return the future, otherwise the excpetions are not bubbled up to Henson
 
 
 Version 0.1.1
