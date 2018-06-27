@@ -89,7 +89,7 @@ class Consumer:
         # inside a coroutine. This is a stopgap solution that should be
         # replaced once boto has support for asyncio or aiobotocore has
         # a stable release.
-        loop = asyncio.get_event_loop()
+        # loop = asyncio.get_event_loop()
         receive_message = partial(
             self.client.receive_message,
             QueueUrl=self.app.settings['SQS_INBOUND_QUEUE_URL'],
@@ -100,8 +100,8 @@ class Consumer:
             WaitTimeSeconds=self.app.settings['SQS_WAIT_TIME'],
         )
         while True:
-            future = loop.run_in_executor(None, receive_message)
-            messages = yield from future
+            # future = loop.run_in_executor(None, receive_message)
+            messages = receive_message()
             for message in messages.get('Messages', []):
                 message['Body'] = json.loads(message['Body'])
                 yield from self._message_queue.put(message)
