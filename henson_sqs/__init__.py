@@ -80,7 +80,7 @@ class Consumer:
             maxsize=self.app.settings['SQS_PREFETCH_LIMIT'],
             loop=loop,
         )
-        return loop.create_task(self._consume())
+        loop.create_task(self._consume())
 
     @asyncio.coroutine
     def _consume(self):
