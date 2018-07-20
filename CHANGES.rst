@@ -1,3 +1,10 @@
+Version 0.2.1
+=============
+
+Released 2018-06-27
+
+- Revert regression introducted in an attempt to address exceptions being swallowed. _begin_consuming reverted to not return the loop.create_task 
+
 Version 0.2.0
 =============
 
