@@ -1,7 +1,6 @@
 """SQS plugin for Henson."""
 
 import asyncio
-from functools import partial
 import json
 import os
 import pkg_resources
@@ -82,6 +81,26 @@ class Consumer:
         )
         loop.create_task(self._consume())
 
+    def _consume_wrapper(self):
+        queueUrl = self.app.settings['SQS_INBOUND_QUEUE_URL']
+        attributeNames = self.app.settings['SQS_ATTRIBUTE_NAMES']
+        messageAttributeNames = self.app.settings['SQS_MESSAGE_ATTRIBUTES']
+        maxNumberOfMessages = self.app.settings['SQS_MESSAGE_BATCH_SIZE']
+        visibilityTimeout = self.app.settings['SQS_VISIBILITY_TIMEOUT']
+        waitTimeSeconds = self.app.settings['SQS_WAIT_TIME']
+
+        try:
+            return self.receive_message(
+                QueueUrl=queueUrl,
+                AttributeNames=attributeNames,
+                MessageAttributeNames=messageAttributeNames,
+                MaxNumberOfMessages=maxNumberOfMessages,
+                VisibilityTimeout=visibilityTimeout,
+                WaitTimeSeconds=waitTimeSeconds
+            )
+        except Exception as e:
+            return e
+
     @asyncio.coroutine
     def _consume(self):
         """Fetch messages from the configured SQS queue."""
@@ -90,18 +109,13 @@ class Consumer:
         # replaced once boto has support for asyncio or aiobotocore has
         # a stable release.
         loop = asyncio.get_event_loop()
-        receive_message = partial(
-            self.client.receive_message,
-            QueueUrl=self.app.settings['SQS_INBOUND_QUEUE_URL'],
-            AttributeNames=self.app.settings['SQS_ATTRIBUTE_NAMES'],
-            MessageAttributeNames=self.app.settings['SQS_MESSAGE_ATTRIBUTES'],
-            MaxNumberOfMessages=self.app.settings['SQS_MESSAGE_BATCH_SIZE'],
-            VisibilityTimeout=self.app.settings['SQS_VISIBILITY_TIMEOUT'],
-            WaitTimeSeconds=self.app.settings['SQS_WAIT_TIME'],
-        )
         while True:
-            future = loop.run_in_executor(None, receive_message)
+            future = loop.run_in_executor(None, self._consume_wrapper)
             messages = yield from future
+
+            # Somewhat hacky, errors are not swallowed by run_in_executor
+            if issubclass(type(messages), Exception):
+                raise messages
             for message in messages.get('Messages', []):
                 message['Body'] = json.loads(message['Body'])
                 yield from self._message_queue.put(message)
